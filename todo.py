@@ -1,5 +1,5 @@
 import sqlite3
-from bottle import route, run, debug, template, request
+from bottle import route, run, debug, template, request, validate
 
 
 
@@ -36,14 +36,49 @@ def new_item():
 
 #mod 3
 @route('/edit/:no', method='GET')
+@validate(no=int)
 def edit_item(no):
-	
+	if request.GET.get('save', '').strip():
+		edit = request.GET.get('task', '').strip()
+		status = request.GET.get('status', '').strip()
+
+		if status == 'open':
+			status = 1
+		else:
+			status = 0
+
+		conn = sqlite3.connect('todo.db')
+		c = conn.cursor()
+		c.execute("UPDATE todo SET task = ?, status = ? WHERE id LIKE ?", (edit, status, no))
+		conn.commit()
+
+		return '<p>The item number %s was successfully updated</p>' % no
+	else:
+		conn = sqlite3.connect('todo.db')
+		c = conn.cursor()
+		c.execute("SELECT task FROM todo WHERE id LIKE ?", (str(no)))
+		cur_data = c.fetchone()
+		return template('edit_task', old = cur_data, no=no)
+
 #mod 3
 
+@route('/todo_all')
+def all_list():
+    conn = sqlite3.connect('todo.db')
+    c = conn.cursor()
+    c.execute("SELECT id, task FROM todo")
+    #mod 1#result = c.fetchall()
+    #mod 1return str(result)
+    #mod 1
+    result = c.fetchall()
+    c.close()
+    output = template('list_all', rows=result)
+    return output
+	#mod 1
 
 
 # reloader and deb for development only
-run(host='localhost', port=8214, debug=True, reloader=True)
+run(host='localhost', port=8215, debug=True, reloader=True)
 
 
 
